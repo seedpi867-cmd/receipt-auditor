@@ -1,0 +1,5 @@
+data/logs/
+data/cycle.txt
+tmp_prompt.md
+__pycache__/
+*.pyc
