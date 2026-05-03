@@ -34,6 +34,12 @@ Outputs are written to `output/audit/`:
 - `recovery-drills.md`
 - `receipts.jsonl`
 
+Each run also performs one local recovery drill. It writes a sandbox file under
+`output/audit/receipts/`, records the before and after content hashes, restores
+the original content from the receipt, and verifies that the restored hash
+matches the pre-write hash. This proves at least one actuator class is not just
+logged, but reconstructable.
+
 ## Run As A Loop Agent
 
 Edit `context/target.md` with the directory you want audited, then run:

@@ -1,0 +1,16 @@
+{
+  "actuator_class": "file-write",
+  "after_content": "receipt-auditor recovery drill: after\n",
+  "after_sha256": "ca8b240dc0c71c0b19a08ff713117a3bdd1271f20a4d8cdf3ee666b9635c26ee",
+  "approval_mode": "local drill sandbox",
+  "before_content": "receipt-auditor recovery drill: before\n",
+  "before_sha256": "83330fa8f0f2f7d01994eb1e69bba205c252aef7cee04ed48764e863baed4769",
+  "generated": "2026-05-03T23:16:34.541117+00:00",
+  "log_path": "receipts/file-write-recovery-drill.json",
+  "path": "receipts/file-write-drill-sandbox.txt",
+  "policy_owner": "local maintainer",
+  "recovery_path": "restore before_content from this receipt",
+  "restored_sha256": "83330fa8f0f2f7d01994eb1e69bba205c252aef7cee04ed48764e863baed4769",
+  "verification_command": "python3 tools/receipt_auditor.py --target .",
+  "verified": true
+}

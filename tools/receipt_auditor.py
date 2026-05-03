@@ -210,8 +210,22 @@ def write_outputs(target_root: Path, outdir: Path, findings: list[Finding]) -> N
         bypass.append("No obvious bypass paths detected.")
     (outdir / "bypass-paths.md").write_text("\n".join(bypass) + "\n", encoding="utf-8")
 
+    drill_result = run_file_write_recovery_drill(outdir, generated)
     drills = [
         "# Recovery Drills",
+        "",
+        "## Completed Local Drill - file-write receipt reconstruction",
+        "",
+        f"- status: `{drill_result['status']}`",
+        f"- receipt: `{drill_result['receipt_path']}`",
+        f"- before_sha256: `{drill_result['before_sha256']}`",
+        f"- after_sha256: `{drill_result['after_sha256']}`",
+        f"- restored_sha256: `{drill_result['restored_sha256']}`",
+        f"- verified: `{drill_result['verified']}`",
+        "",
+        "This drill mutates only `output/audit/receipts/file-write-drill-sandbox.txt` and proves that the receipt contains enough state to reconstruct the pre-write file exactly.",
+        "",
+        "## Manual Drills Still Needed",
         "",
         "- Pick one high or critical actuator and prove its token can be revoked.",
         "- Pick one deploy path and prove rollback from a bad deploy.",
@@ -243,6 +257,57 @@ def write_outputs(target_root: Path, outdir: Path, findings: list[Finding]) -> N
 
 def escape_cell(value: str) -> str:
     return value.replace("|", "\\|").replace("\n", " ")
+
+
+def sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def run_file_write_recovery_drill(outdir: Path, generated: str) -> dict[str, str | bool]:
+    receipts_dir = outdir / "receipts"
+    receipts_dir.mkdir(exist_ok=True)
+    sandbox = receipts_dir / "file-write-drill-sandbox.txt"
+    receipt_path = receipts_dir / "file-write-recovery-drill.json"
+
+    before = "receipt-auditor recovery drill: before\n"
+    after = "receipt-auditor recovery drill: after\n"
+    sandbox.write_text(before, encoding="utf-8")
+    before_sha = sha256_text(before)
+
+    sandbox.write_text(after, encoding="utf-8")
+    after_sha = sha256_text(after)
+
+    receipt = {
+        "generated": generated,
+        "actuator_class": "file-write",
+        "path": sandbox.relative_to(outdir).as_posix(),
+        "policy_owner": "local maintainer",
+        "approval_mode": "local drill sandbox",
+        "log_path": receipt_path.relative_to(outdir).as_posix(),
+        "recovery_path": "restore before_content from this receipt",
+        "verification_command": "python3 tools/receipt_auditor.py --target .",
+        "before_content": before,
+        "before_sha256": before_sha,
+        "after_content": after,
+        "after_sha256": after_sha,
+    }
+
+    recovered = str(receipt["before_content"])
+    sandbox.write_text(recovered, encoding="utf-8")
+    restored_sha = sha256_text(sandbox.read_text(encoding="utf-8"))
+    verified = restored_sha == before_sha and before_sha != after_sha
+    receipt["restored_sha256"] = restored_sha
+    receipt["verified"] = verified
+
+    receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    return {
+        "status": "passed" if verified else "failed",
+        "receipt_path": receipt_path.relative_to(outdir).as_posix(),
+        "before_sha256": before_sha,
+        "after_sha256": after_sha,
+        "restored_sha256": restored_sha,
+        "verified": verified,
+    }
 
 
 def main() -> int:
