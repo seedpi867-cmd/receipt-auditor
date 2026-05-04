@@ -1,0 +1,12 @@
+{
+  "scheduler": {
+    "enabled": true,
+    "interval_seconds": 300,
+    "name": "fixture-loop",
+    "next_run": "2026-05-04T10:30:00+09:30"
+  },
+  "services": {
+    "fixture-loop": "running",
+    "unrelated-webserver": "running"
+  }
+}

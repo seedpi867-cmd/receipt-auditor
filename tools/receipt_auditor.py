@@ -210,27 +210,39 @@ def write_outputs(target_root: Path, outdir: Path, findings: list[Finding]) -> N
         bypass.append("No obvious bypass paths detected.")
     (outdir / "bypass-paths.md").write_text("\n".join(bypass) + "\n", encoding="utf-8")
 
-    drill_result = run_file_write_recovery_drill(outdir, generated)
+    file_write_drill = run_file_write_recovery_drill(outdir, generated)
+    scheduler_drill = run_scheduler_pause_resume_drill(outdir, generated)
     drills = [
         "# Recovery Drills",
         "",
         "## Completed Local Drill - file-write receipt reconstruction",
         "",
-        f"- status: `{drill_result['status']}`",
-        f"- receipt: `{drill_result['receipt_path']}`",
-        f"- before_sha256: `{drill_result['before_sha256']}`",
-        f"- after_sha256: `{drill_result['after_sha256']}`",
-        f"- restored_sha256: `{drill_result['restored_sha256']}`",
-        f"- verified: `{drill_result['verified']}`",
+        f"- status: `{file_write_drill['status']}`",
+        f"- receipt: `{file_write_drill['receipt_path']}`",
+        f"- before_sha256: `{file_write_drill['before_sha256']}`",
+        f"- after_sha256: `{file_write_drill['after_sha256']}`",
+        f"- restored_sha256: `{file_write_drill['restored_sha256']}`",
+        f"- verified: `{file_write_drill['verified']}`",
         "",
         "This drill mutates only `output/audit/receipts/file-write-drill-sandbox.txt` and proves that the receipt contains enough state to reconstruct the pre-write file exactly.",
+        "",
+        "## Completed Local Drill - scheduler pause/resume fixture",
+        "",
+        f"- status: `{scheduler_drill['status']}`",
+        f"- receipt: `{scheduler_drill['receipt_path']}`",
+        f"- before_sha256: `{scheduler_drill['before_sha256']}`",
+        f"- paused_sha256: `{scheduler_drill['paused_sha256']}`",
+        f"- resumed_sha256: `{scheduler_drill['resumed_sha256']}`",
+        f"- unrelated_service_preserved: `{scheduler_drill['unrelated_service_preserved']}`",
+        f"- verified: `{scheduler_drill['verified']}`",
+        "",
+        "This drill mutates only `output/audit/receipts/scheduler-drill-state.json` and proves that a scheduler can be paused and resumed from a receipt while preserving unrelated service state.",
         "",
         "## Manual Drills Still Needed",
         "",
         "- Pick one high or critical actuator and prove its token can be revoked.",
         "- Pick one deploy path and prove rollback from a bad deploy.",
         "- Pick one social/email path and prove exact message logs exist.",
-        "- Pick one scheduler and prove it can be paused without killing unrelated services.",
         "- Pick one shell-command bypass and prove the command transcript is captured.",
     ]
     (outdir / "recovery-drills.md").write_text("\n".join(drills) + "\n", encoding="utf-8")
@@ -306,6 +318,86 @@ def run_file_write_recovery_drill(outdir: Path, generated: str) -> dict[str, str
         "before_sha256": before_sha,
         "after_sha256": after_sha,
         "restored_sha256": restored_sha,
+        "verified": verified,
+    }
+
+
+def sha256_json(value: dict[str, object]) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def write_json(path: Path, value: dict[str, object]) -> None:
+    path.write_text(json.dumps(value, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
+def run_scheduler_pause_resume_drill(outdir: Path, generated: str) -> dict[str, str | bool]:
+    receipts_dir = outdir / "receipts"
+    receipts_dir.mkdir(exist_ok=True)
+    state_path = receipts_dir / "scheduler-drill-state.json"
+    receipt_path = receipts_dir / "scheduler-pause-resume-drill.json"
+
+    before: dict[str, object] = {
+        "scheduler": {
+            "name": "fixture-loop",
+            "enabled": True,
+            "next_run": "2026-05-04T10:30:00+09:30",
+            "interval_seconds": 300,
+        },
+        "services": {
+            "fixture-loop": "running",
+            "unrelated-webserver": "running",
+        },
+    }
+    write_json(state_path, before)
+    before_sha = sha256_json(before)
+
+    paused = json.loads(json.dumps(before))
+    paused["scheduler"]["enabled"] = False
+    paused["scheduler"]["pause_reason"] = "receipt-auditor fixture drill"
+    write_json(state_path, paused)
+    paused_sha = sha256_json(paused)
+
+    receipt = {
+        "generated": generated,
+        "actuator_class": "scheduler",
+        "path": state_path.relative_to(outdir).as_posix(),
+        "policy_owner": "local maintainer",
+        "approval_mode": "local drill sandbox",
+        "log_path": receipt_path.relative_to(outdir).as_posix(),
+        "recovery_path": "restore scheduler object from before_state in this receipt",
+        "verification_command": "python3 tools/receipt_auditor.py --target .",
+        "before_state": before,
+        "paused_state": paused,
+        "before_sha256": before_sha,
+        "paused_sha256": paused_sha,
+    }
+
+    resumed = json.loads(json.dumps(paused))
+    resumed["scheduler"] = receipt["before_state"]["scheduler"]
+    write_json(state_path, resumed)
+    resumed_sha = sha256_json(resumed)
+
+    unrelated_service_preserved = (
+        before["services"]["unrelated-webserver"]
+        == paused["services"]["unrelated-webserver"]
+        == resumed["services"]["unrelated-webserver"]
+    )
+    verified = resumed_sha == before_sha and paused_sha != before_sha and unrelated_service_preserved
+
+    receipt["resumed_state"] = resumed
+    receipt["resumed_sha256"] = resumed_sha
+    receipt["unrelated_service_preserved"] = unrelated_service_preserved
+    receipt["verified"] = verified
+    write_json(receipt_path, receipt)
+
+    return {
+        "status": "passed" if verified else "failed",
+        "receipt_path": receipt_path.relative_to(outdir).as_posix(),
+        "before_sha256": before_sha,
+        "paused_sha256": paused_sha,
+        "resumed_sha256": resumed_sha,
+        "unrelated_service_preserved": unrelated_service_preserved,
         "verified": verified,
     }
 

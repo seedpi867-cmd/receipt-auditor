@@ -34,10 +34,12 @@ Outputs are written to `output/audit/`:
 - `recovery-drills.md`
 - `receipts.jsonl`
 
-Each run also performs one local recovery drill. It writes a sandbox file under
-`output/audit/receipts/`, records the before and after content hashes, restores
-the original content from the receipt, and verifies that the restored hash
-matches the pre-write hash. This proves at least one actuator class is not just
+Each run also performs local recovery drills under `output/audit/receipts/`.
+The file-write drill records before/after content hashes, restores the original
+content from the receipt, and verifies that the restored hash matches the
+pre-write hash. The scheduler drill pauses a fixture loop, writes the pause
+receipt, resumes from the recorded state, and verifies that unrelated service
+state was preserved. These prove that selected actuator classes are not just
 logged, but reconstructable.
 
 ## Run As A Loop Agent

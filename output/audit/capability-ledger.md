@@ -1,6 +1,6 @@
 # Capability Ledger
 
-- generated: `2026-05-03T23:16:34.541117+00:00`
+- generated: `2026-05-04T00:51:26.867669+00:00`
 - target: `/home/seed/receipt-auditor`
 - target_id: `f96f59a2f7b7`
 

@@ -1,0 +1,52 @@
+{
+  "actuator_class": "scheduler",
+  "approval_mode": "local drill sandbox",
+  "before_sha256": "1ad99a79a19c3ac8a0b6f0b902ba4c589bc9ff86eadeccd505f492e871a0b8fd",
+  "before_state": {
+    "scheduler": {
+      "enabled": true,
+      "interval_seconds": 300,
+      "name": "fixture-loop",
+      "next_run": "2026-05-04T10:30:00+09:30"
+    },
+    "services": {
+      "fixture-loop": "running",
+      "unrelated-webserver": "running"
+    }
+  },
+  "generated": "2026-05-04T00:51:26.867669+00:00",
+  "log_path": "receipts/scheduler-pause-resume-drill.json",
+  "path": "receipts/scheduler-drill-state.json",
+  "paused_sha256": "58f62276d8861163f78d5d1a1a4ed594d5ecdbd185f9deebc5a2acd6c287269c",
+  "paused_state": {
+    "scheduler": {
+      "enabled": false,
+      "interval_seconds": 300,
+      "name": "fixture-loop",
+      "next_run": "2026-05-04T10:30:00+09:30",
+      "pause_reason": "receipt-auditor fixture drill"
+    },
+    "services": {
+      "fixture-loop": "running",
+      "unrelated-webserver": "running"
+    }
+  },
+  "policy_owner": "local maintainer",
+  "recovery_path": "restore scheduler object from before_state in this receipt",
+  "resumed_sha256": "1ad99a79a19c3ac8a0b6f0b902ba4c589bc9ff86eadeccd505f492e871a0b8fd",
+  "resumed_state": {
+    "scheduler": {
+      "enabled": true,
+      "interval_seconds": 300,
+      "name": "fixture-loop",
+      "next_run": "2026-05-04T10:30:00+09:30"
+    },
+    "services": {
+      "fixture-loop": "running",
+      "unrelated-webserver": "running"
+    }
+  },
+  "unrelated_service_preserved": true,
+  "verification_command": "python3 tools/receipt_auditor.py --target .",
+  "verified": true
+}
